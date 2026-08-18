@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "403168953726",
+    "project_id": "squashdisease",
+    "storage_bucket": "squashdisease.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:403168953726:android:91432d82debc266c0b1f2f",
+        "android_client_info": {
+          "package_name": "com.example.squash_disease"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXbFee-KwD93UgPofvaYa5isjwDiqcXo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

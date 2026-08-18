@@ -1,0 +1,5 @@
+downy_mildew
+healthy_leaf
+mosaic_virus
+not_squash_leaf
+powdery_mildew
