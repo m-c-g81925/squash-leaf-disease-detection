@@ -324,16 +324,9 @@ print(
 )
 
 
-model = tf.keras.models.load_model(
-    MODEL_PATH,
-    custom_objects={
-        "preprocess_input":
-            preprocess_input,
-    },
-    safe_mode=False,
-)
-
-
+# Load the small labels file at startup, but defer loading model.h5.
+# This lets Expert Review endpoints become available without first
+# deserializing the CNN model.
 with open(
     LABELS_PATH,
     "r",
@@ -348,13 +341,42 @@ with open(
     ]
 
 
+model = None
+
+
+def get_model():
+
+    global model
+
+    if model is None:
+
+        print(
+            "LOADING CNN MODEL ON FIRST /predict REQUEST..."
+        )
+
+        model = tf.keras.models.load_model(
+            MODEL_PATH,
+            custom_objects={
+                "preprocess_input":
+                    preprocess_input,
+            },
+            safe_mode=False,
+        )
+
+        print(
+            "CNN MODEL LOADED SUCCESSFULLY"
+        )
+
+    return model
+
+
 print(
-    "MODEL LOADED SUCCESSFULLY"
+    "LABELS LOADED:",
+    class_names,
 )
 
 print(
-    "LABELS:",
-    class_names,
+    "CNN MODEL WILL LOAD ONLY WHEN /predict IS USED."
 )
 
 
@@ -473,7 +495,9 @@ async def predict(
     )
 
 
-    prediction = model.predict(
+    prediction_model = get_model()
+
+    prediction = prediction_model.predict(
         img_array
     )
 
