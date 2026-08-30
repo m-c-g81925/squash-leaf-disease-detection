@@ -1,10 +1,6 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AgriculturistReviewDetailScreen extends StatefulWidget {
   final String documentId;
@@ -35,13 +31,16 @@ class _AgriculturistReviewDetailScreenState
   String _selectedStatus = 'reviewed';
   bool _isSaving = false;
 
-  static const String _baseUrl = 'http://10.0.25.151:8000';
+  static const String _bucket = 'expert-review-images';
   bool _isLoadingImage = false;
-  Uint8List? _submittedImageBytes;
+  String? _submittedImageUrl;
   String? _imageError;
 
   String get _imagePath =>
       widget.data['imagePath']?.toString().trim() ?? '';
+
+  String get _savedImageUrl =>
+      widget.data['imageUrl']?.toString().trim() ?? '';
 
   static const List<String> _statusOptions = [
     'reviewed',
@@ -75,13 +74,7 @@ class _AgriculturistReviewDetailScreenState
   }
 
   Future<void> _loadSubmittedImage() async {
-    if (_isLoadingImage || _imagePath.isEmpty) return;
-
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      if (mounted) setState(() => _imageError = 'You must be logged in to view this image.');
-      return;
-    }
+    if (_isLoadingImage) return;
 
     setState(() {
       _isLoadingImage = true;
@@ -89,58 +82,33 @@ class _AgriculturistReviewDetailScreenState
     });
 
     try {
-      final String? idToken = await user.getIdToken();
-      if (idToken == null || idToken.isEmpty) {
-        throw StateError('Unable to verify the agriculturist account.');
+      String imageUrl = _savedImageUrl;
+
+      if (imageUrl.isEmpty && _imagePath.isNotEmpty) {
+        imageUrl = Supabase.instance.client.storage
+            .from(_bucket)
+            .getPublicUrl(_imagePath);
       }
 
-      final Uri uri = Uri.parse('$_baseUrl/expert-review/image').replace(
-        queryParameters: <String, String>{'image_path': _imagePath},
-      );
-
-      final http.Response response = await http.get(
-        uri,
-        headers: <String, String>{'Authorization': 'Bearer $idToken'},
-      ).timeout(const Duration(seconds: 30));
-
-      if (response.statusCode != 200) {
-        String message = 'Unable to load the submitted leaf image.';
-        try {
-          final dynamic decoded = jsonDecode(response.body);
-          if (decoded is Map && decoded['detail'] != null) {
-            message = decoded['detail'].toString();
-          }
-        } catch (_) {}
-        throw StateError(message);
+      if (imageUrl.isEmpty) {
+        throw StateError(
+          'No photo is attached to this request.',
+        );
       }
 
-      final dynamic decoded = jsonDecode(response.body);
-      if (decoded is! Map) throw StateError('The server returned an invalid image response.');
-
-      final String signedUrl = decoded['signedUrl']?.toString().trim() ?? '';
-      if (signedUrl.isEmpty) throw StateError('The server did not return an image URL.');
-
-      final http.Response imageResponse = await http.get(
-        Uri.parse(signedUrl),
-      ).timeout(const Duration(seconds: 30));
-
-      if (imageResponse.statusCode != 200) {
-        throw StateError('The image server returned ${imageResponse.statusCode}.');
-      }
-      if (imageResponse.bodyBytes.isEmpty) {
-        throw StateError('The submitted image contained no data.');
-      }
       if (!mounted) return;
 
       setState(() {
-        _submittedImageBytes = imageResponse.bodyBytes;
+        _submittedImageUrl = imageUrl;
         _isLoadingImage = false;
       });
     } catch (error) {
       if (!mounted) return;
+
       setState(() {
         _isLoadingImage = false;
-        _imageError = error.toString().replaceFirst('Bad state: ', '');
+        _imageError =
+            error.toString().replaceFirst('Bad state: ', '');
       });
     }
   }
@@ -179,23 +147,50 @@ class _AgriculturistReviewDetailScreenState
                 ),
               ),
             )
-          else if (_submittedImageBytes != null)
+          else if (_submittedImageUrl != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: double.infinity,
-                constraints: const BoxConstraints(minHeight: 200, maxHeight: 360),
+                constraints: const BoxConstraints(
+                  minHeight: 200,
+                  maxHeight: 360,
+                ),
                 color: const Color(0xFFF0F2F0),
                 alignment: Alignment.center,
-                child: Image.memory(
-                  _submittedImageBytes!,
+                child: Image.network(
+                  _submittedImageUrl!,
                   width: double.infinity,
                   fit: BoxFit.contain,
                   gaplessPlayback: true,
                   cacheWidth: 1200,
+                  loadingBuilder: (
+                    BuildContext context,
+                    Widget child,
+                    ImageChunkEvent? loadingProgress,
+                  ) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
+
+                    return const SizedBox(
+                      height: 210,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: _primaryColor,
+                        ),
+                      ),
+                    );
+                  },
                   errorBuilder: (_, __, ___) => SizedBox(
                     height: 210,
-                    child: Center(child: TextButton.icon(onPressed: _loadSubmittedImage, icon: const Icon(Icons.refresh), label: const Text('Reload Photo'))),
+                    child: Center(
+                      child: TextButton.icon(
+                        onPressed: _loadSubmittedImage,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Reload Photo'),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -281,6 +276,8 @@ class _AgriculturistReviewDetailScreenState
       _isSaving = true;
     });
 
+    bool notificationSent = false;
+
     try {
       await FirebaseFirestore.instance
           .collection('expert_reviews')
@@ -293,6 +290,60 @@ class _AgriculturistReviewDetailScreenState
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      final String farmerUid =
+          widget.data['userId']?.toString().trim() ?? '';
+
+      if (farmerUid.isNotEmpty) {
+        try {
+          String notificationTitle =
+              'Expert Review Completed';
+
+          String notificationBody =
+              'Your submitted squash leaf image has been reviewed by an agriculturist. Open the app to view the diagnosis and recommendation.';
+
+          if (_selectedStatus == 'verified') {
+            notificationTitle =
+                'Expert Review Verified';
+            notificationBody =
+                'An agriculturist verified your submitted squash leaf review. Open the app to view the diagnosis and recommendation.';
+          } else if (_selectedStatus == 'rejected') {
+            notificationTitle =
+                'Expert Review Update';
+            notificationBody =
+                'Your submitted squash leaf review was rejected by the agriculturist. Open the app to view the diagnosis and recommendation.';
+          }
+
+          final FunctionResponse response =
+              await Supabase.instance.client.functions.invoke(
+            'send-review-notification',
+            body: <String, dynamic>{
+              'farmerUid': farmerUid,
+              'title': notificationTitle,
+              'body': notificationBody,
+            },
+          );
+
+          if (response.status >= 200 &&
+              response.status < 300) {
+            notificationSent = true;
+          } else {
+            debugPrint(
+              'Expert review notification failed: '
+              '${response.status} ${response.data}',
+            );
+          }
+        } catch (notificationError) {
+          debugPrint(
+            'Unable to send expert review notification: '
+            '$notificationError',
+          );
+        }
+      } else {
+        debugPrint(
+          'Unable to notify farmer: userId is missing from the review request.',
+        );
+      }
+
       if (!mounted) {
         return;
       }
@@ -302,9 +353,11 @@ class _AgriculturistReviewDetailScreenState
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Expert review saved successfully.',
+            notificationSent
+                ? 'Expert review saved and farmer notified.'
+                : 'Expert review saved successfully.',
           ),
           backgroundColor: _primaryColor,
         ),

@@ -56,30 +56,30 @@ class UpcomingSchedule extends StatelessWidget {
       }
     }
 
-    return 'Other';
+    return 'Iban';
   }
 
   IconData _icon(String type) {
     switch (type) {
-      case 'Planting':
+      case 'Pagtanom':
         return Icons.eco;
 
-      case 'Watering':
+      case 'Pagbunyag':
         return Icons.water_drop;
 
-      case 'Fertilizing':
+      case 'Pagbutang sang Abono':
         return Icons.grass;
 
-      case 'Disease Scan':
+      case 'Pag-scan sang Balatian':
         return Icons.camera_alt;
 
-      case 'Pest Control':
+      case 'Pagkontrol sang Peste':
         return Icons.shield;
 
-      case 'Weeding':
+      case 'Pagpanghilamon':
         return Icons.yard;
 
-      case 'Harvest':
+      case 'Pag-ani':
         return Icons.agriculture;
 
       default:
@@ -131,7 +131,7 @@ class UpcomingSchedule extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Center(
-              child: Text("Unable to load schedules."),
+              child: Text("Indi ma-load ang mga schedule."),
             ),
           );
         }
@@ -164,7 +164,7 @@ class UpcomingSchedule extends StatelessWidget {
                   ),
                   SizedBox(width: 8),
                   Text(
-                    "Upcoming Schedule",
+                    "Masunod nga mga Schedule",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -182,7 +182,7 @@ class UpcomingSchedule extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      "No upcoming schedules.",
+                      "Wala sang masunod nga schedule.",
                       style: TextStyle(
                         color: Colors.grey,
                       ),

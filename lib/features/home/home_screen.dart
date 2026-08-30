@@ -39,26 +39,16 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 26),
 
-              const _SectionTitle(
-                title: 'Overview',
-              ),
-
-              const SizedBox(height: 12),
-
-              const DashboardStatistics(),
-
-              const SizedBox(height: 28),
-
-             
-
-              const SizedBox(height: 12),
-
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: QuickActions(
                   onTabChange: onTabChange,
                 ),
               ),
+
+              const SizedBox(height: 28),
+
+              const DashboardStatistics(),
 
               const SizedBox(height: 12),
 
@@ -167,7 +157,7 @@ class _ExpertReviewShortcut extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Expert review requests',
+                      'Mga Request para sa Expert Review',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -176,7 +166,7 @@ class _ExpertReviewShortcut extends StatelessWidget {
                     ),
                     SizedBox(height: 3),
                     Text(
-                      'Check pending and completed reviews',
+                      'Tan-awa ang pending kag natapos nga mga review',
                       style: TextStyle(
                         fontSize: 12.5,
                         height: 1.3,

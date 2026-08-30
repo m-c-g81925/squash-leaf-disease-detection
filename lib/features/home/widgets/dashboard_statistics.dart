@@ -48,7 +48,7 @@ class DashboardStatistics extends StatelessWidget {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Unable to load dashboard statistics.',
+                      'Indi ma-load ang statistics sang dashboard.',
                       style: TextStyle(
                         color: Colors.red,
                         fontWeight: FontWeight.w600,
@@ -90,7 +90,7 @@ class DashboardStatistics extends StatelessWidget {
         final mostCommonDisease =
             statistics['mostCommonDisease']
                     ?.toString() ??
-                'None';
+                'Wala';
 
         return Column(
           children: [
@@ -101,7 +101,7 @@ class DashboardStatistics extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Scan Statistics',
+                  'Statistics sang Scan',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -120,7 +120,7 @@ class DashboardStatistics extends StatelessWidget {
                 children: [
                   Expanded(
                     child: StatCard(
-                      title: 'Total Scans',
+                      title: 'Kabug-usan nga Scan',
                       value: totalScans.toString(),
                       icon: Icons.document_scanner,
                       color: const Color(0xFF179E43),
@@ -179,7 +179,7 @@ class DashboardStatistics extends StatelessWidget {
                 horizontal: 18,
               ),
               child: WideStatCard(
-                title: 'Highest Confidence',
+                title: 'Pinakataas nga Confidence',
                 value: totalScans == 0
                     ? '0.00%'
                     : '${highestConfidence.toStringAsFixed(2)}%',
@@ -195,7 +195,7 @@ class DashboardStatistics extends StatelessWidget {
                 horizontal: 18,
               ),
               child: WideStatCard(
-                title: 'Most Common Disease',
+                title: 'Pinakakomon nga Balatian',
                 value: mostCommonDisease,
                 icon: Icons.coronavirus_outlined,
                 color: const Color(0xFF7B1FA2),

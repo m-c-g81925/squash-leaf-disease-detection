@@ -54,3 +54,6 @@ venv/
 **/.env
 firebase-service-account.json
 **/firebase-service-account.json
+# Training dataset
+backend/dataset/
+backend/dataset_split/

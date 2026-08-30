@@ -29,23 +29,23 @@ class RecentActivity extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inMinutes < 1) {
-      return 'Just now';
+      return 'Bag-o lang';
     }
 
     if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} min ago';
+      return '${difference.inMinutes} minutos ang nagligad';
     }
 
     if (difference.inHours < 24) {
-      return '${difference.inHours} hr ago';
+      return '${difference.inHours} oras ang nagligad';
     }
 
     if (difference.inDays == 1) {
-      return 'Yesterday';
+      return 'Kahapon';
     }
 
     if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
+      return '${difference.inDays} ka adlaw ang nagligad';
     }
 
     return '${date.month}/${date.day}/${date.year}';
@@ -78,7 +78,7 @@ class RecentActivity extends StatelessWidget {
                 horizontal: 20,
               ),
               child: Text(
-                'Recent Activity',
+                'Bag-o nga mga Aktibidad',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -116,14 +116,14 @@ class RecentActivity extends StatelessWidget {
                       ),
                       SizedBox(height: 12),
                       Text(
-                        'No recent scans yet.',
+                        'Wala pa sang bag-o nga scan.',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 6),
                       Text(
-                        'Your latest scan results will appear here.',
+                        'Diri makita ang imo pinakabag-o nga resulta sang scan.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.grey,

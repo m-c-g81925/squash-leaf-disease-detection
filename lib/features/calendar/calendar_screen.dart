@@ -6,6 +6,8 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../core/constants/app_colors.dart';
 import 'add_schedule_screen.dart';
 import 'schedule_detail_screen.dart';
+import 'plant_tracker_screen.dart';
+import 'plant_tracker_list_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -48,6 +50,221 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .collection('schedules')
         .where('userId', isEqualTo: userId)
         .snapshots();
+  }
+
+  Future<void> _showAddOptions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        Widget optionCard({
+          required IconData icon,
+          required String title,
+          required String subtitle,
+          required VoidCallback onTap,
+        }) {
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: onTap,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: const Color(0xFFE1E7E2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: const Color(0xFF179E43),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1B1B1B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              height: 1.35,
+                              color: Color(0xFF667069),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFF2F7F3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Color(0xFF179E43),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 26),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF8FAF8),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(28),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 46,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Color(0xFFD8DEDA),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFE8F5E9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.add,
+                        color: Color(0xFF179E43),
+                        size: 26,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Add to Planting Calendar',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1B1B1B),
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Choose what you want to record.',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF667069),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                optionCard(
+                  icon: Icons.eco,
+                  title: 'Track New Squash Plant',
+                  subtitle:
+                      'Record the planting date and monitor growth until harvest.',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openPlantTracker();
+                  },
+                ),
+                const SizedBox(height: 12),
+                optionCard(
+                  icon: Icons.event_note,
+                  title: 'Add Schedule',
+                  subtitle:
+                      'Create watering, fertilizing, disease scan, or other reminders.',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _openAddScheduleScreen();
+                  },
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(sheetContext),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        color: Color(0xFF667069),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openPlantTracker() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PlantTrackerScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openMySquashPlants() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PlantTrackerListScreen(),
+      ),
+    );
   }
 
   Future<void> _openAddScheduleScreen() async {
@@ -178,9 +395,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendarAddMenu',
         backgroundColor: const Color(0xFF179E43),
-        onPressed: _openAddScheduleScreen,
-        child: const Icon(Icons.add, color: Colors.white),
+        foregroundColor: Colors.white,
+        onPressed: _showAddOptions,
+        child: const Icon(
+          Icons.add,
+          size: 30,
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -219,6 +441,68 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 95),
                 child: Column(
                   children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: _openMySquashPlants,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: const Color(0xFFC8E6C9),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.eco,
+                                color: Color(0xFF179E43),
+                                size: 29,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'My Squash Plants',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1B1B1B),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'View growth stage, plant age, and estimated harvest.',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: Color(0xFF5E6962),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Color(0xFF179E43),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                       stream: _calendarStream(),
                       builder: (context, snapshot) {
@@ -544,3 +828,4 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
+

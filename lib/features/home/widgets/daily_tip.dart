@@ -8,39 +8,39 @@ class DailyTip extends StatelessWidget {
   static const List<Map<String, dynamic>> _tips = [
     {
       'icon': Icons.water_drop,
-      'title': 'Water Early',
+      'title': 'Magbunyag sing aga',
       'tip':
-          'Water your squash plants early in the morning to reduce evaporation and help prevent fungal diseases.',
+          'Bunyagi ang imo tanom nga kalabasa sing temprano sa aga agod indi madali mag alisngaw ang tubig kag makabulig sa paglikaw sa fungal diseases.',
     },
     {
       'icon': Icons.eco,
-      'title': 'Inspect Leaves',
+      'title': 'I-check ang mga dahon',
       'tip':
-          'Check the top and underside of leaves regularly for signs of disease or insect damage.',
+          'Regualar nga i-check and ibabaw kag idalom sang mga dahon para makita kon may mga senyales sang balatian ukon halit sang mga insekto.',
     },
     {
       'icon': Icons.camera_alt,
-      'title': 'Scan Weekly',
+      'title': 'Mag-scan kada semana',
       'tip':
-          'Use the disease scanner at least once a week to detect infections early.',
+          'Gamita and disease scanner bisan isa ka beses kada semana agod temprano nga ma-detect ang posible nga balatian sang tanom.',
     },
     {
       'icon': Icons.grass,
-      'title': 'Apply Fertilizer',
+      'title': 'Magbutang sang abono',
       'tip':
-          'Apply fertilizer according to your planting schedule to promote healthy squash growth.',
+          'Magbutang sang abono suno sa imo planting schedule agod magtubo sing maayo kag mangin healthy ang imo kalabasa.',
     },
     {
       'icon': Icons.wb_sunny,
-      'title': 'Provide Sunlight',
+      'title': 'Hatagi sing igo nga adlaw',
       'tip':
-          'Squash plants grow best with 6–8 hours of direct sunlight every day.',
+          'Mas maayo ang pagtubo sang kalabasa kon makabaton ini sang 6-8 ka oras nga direkta nga silak sang adlaw kada adlaw.',
     },
     {
       'icon': Icons.cleaning_services,
-      'title': 'Keep the Area Clean',
+      'title': 'Limpyohon permi ang palibot',
       'tip':
-          'Remove dead leaves and weeds around your plants to reduce disease spread.',
+          'Kuhaa ang mga patay nga dahon kag hilamon sa palibot sang imo nga tanom agod mabuligan nga malikawan ang paglapta sang balatian.',
     },
   ];
 
@@ -77,7 +77,7 @@ class DailyTip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  "🌱 Daily Farming Tip",
+                  "🌱 Tip sa pangunguma",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 17,

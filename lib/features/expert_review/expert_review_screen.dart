@@ -106,7 +106,8 @@ class _ReviewCard extends StatefulWidget {
 class _ReviewCardState extends State<_ReviewCard>
     with AutomaticKeepAliveClientMixin<_ReviewCard> {
   static const Color _primaryColor = Color(0xFF179E43);
-  static const String _baseUrl = 'http://10.0.25.151:8000';
+  static const String _baseUrl =
+      'https://squash-leaf-disease-detection.onrender.com';
 
   final TextEditingController diagnosisController =
       TextEditingController();
@@ -244,7 +245,7 @@ class _ReviewCardState extends State<_ReviewCard>
           'Authorization': 'Bearer $idToken',
         },
       ).timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 120),
       );
 
       if (response.statusCode != 200) {
@@ -287,7 +288,7 @@ class _ReviewCardState extends State<_ReviewCard>
           await http.get(
         Uri.parse(signedUrl),
       ).timeout(
-        const Duration(seconds: 30),
+        const Duration(seconds: 120),
       );
 
       if (imageResponse.statusCode != 200) {

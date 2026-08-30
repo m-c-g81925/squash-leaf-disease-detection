@@ -29,9 +29,11 @@ class RoleSelectionScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   const Text(
-                    "Smart Squash",
+                    "Squash Leaf Disease Detection ",
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 24,
+                      height: 1.25,
                       fontWeight: FontWeight.bold,
                       color: primaryColor,
                     ),

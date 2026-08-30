@@ -7,11 +7,11 @@ class AppHeader extends StatelessWidget {
     final hour = DateTime.now().hour;
 
     if (hour < 12) {
-      return 'Good Morning';
+      return 'Maayong Aga';
     } else if (hour < 18) {
-      return 'Good Afternoon';
+      return 'Maayong Hapon';
     } else {
-      return 'Good Evening';
+      return 'Maayong Gab-i';
     }
   }
 
@@ -77,7 +77,7 @@ class AppHeader extends StatelessWidget {
                 const SizedBox(height: 4),
 
                 const Text(
-                  'Monitor your squash plants with squash leaf disease detection.',
+                  'I monitor and tanom mo nga karbasa gamit squash leaf disease detection.',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey,

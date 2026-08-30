@@ -1,9 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:image/image.dart' as img;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ExpertReviewService {
   ExpertReviewService._();
@@ -11,14 +12,19 @@ class ExpertReviewService {
   static final FirebaseFirestore _firestore =
       FirebaseFirestore.instance;
 
-  static final FirebaseAuth _auth =
-      FirebaseAuth.instance;
+  static final firebase_auth.FirebaseAuth _auth =
+      firebase_auth.FirebaseAuth.instance;
+
+  static final SupabaseClient _supabase =
+      Supabase.instance.client;
 
   static const String _collection = 'expert_reviews';
+  static const String _bucket = 'expert-review-images';
 
-  // Change this if your computer's IPv4 address changes.
-  static const String _baseUrl =
-      'http://10.0.25.151:8000';
+  // Keeps the review image clear enough for the agriculturist
+  // while reducing upload/download time.
+  static const int _maxImageDimension = 1024;
+  static const int _jpegQuality = 82;
 
   static Future<void> submitReview({
     required File imageFile,
@@ -28,7 +34,7 @@ class ExpertReviewService {
     required String municipality,
     required String contactNumber,
   }) async {
-    final User? user = _auth.currentUser;
+    final firebase_auth.User? user = _auth.currentUser;
 
     if (user == null) {
       throw StateError(
@@ -42,10 +48,8 @@ class ExpertReviewService {
       );
     }
 
-    // Check extension.
-    final String filePath = imageFile.path;
     final String extension =
-        filePath.split('.').last.toLowerCase();
+        imageFile.path.split('.').last.toLowerCase();
 
     if (extension != 'jpg' &&
         extension != 'jpeg' &&
@@ -55,104 +59,92 @@ class ExpertReviewService {
       );
     }
 
-    final String? idToken =
-        await user.getIdToken();
-
-    if (idToken == null || idToken.isEmpty) {
-      throw StateError(
-        'Unable to verify your account.',
-      );
-    }
-
-    final Uri uploadUri = Uri.parse(
-      '$_baseUrl/expert-review/upload',
-    );
-
-    final http.MultipartRequest request =
-        http.MultipartRequest(
-      'POST',
-      uploadUri,
-    );
-
-    request.headers['Authorization'] =
-        'Bearer $idToken';
-
-    // Explicitly assign MIME type.
-    //
-    // .jpg and .jpeg BOTH use image/jpeg.
-    // .png uses image/png.
-    final String mimeType =
-        extension == 'png'
-            ? 'image/png'
-            : 'image/jpeg';
-
-    final List<int> imageBytes =
+    final Uint8List originalBytes =
         await imageFile.readAsBytes();
 
-    final http.MultipartFile multipartFile =
-        http.MultipartFile.fromBytes(
-      'file',
-      imageBytes,
-      filename:
-          'expert_review_${DateTime.now().millisecondsSinceEpoch}.$extension',
-      contentType: http.MediaType.parse(mimeType),
-    );
+    final img.Image? decodedImage =
+        img.decodeImage(originalBytes);
 
-    request.files.add(multipartFile);
-
-    final http.StreamedResponse streamedResponse =
-        await request.send().timeout(
-      const Duration(seconds: 60),
-    );
-
-    final http.Response response =
-        await http.Response.fromStream(
-      streamedResponse,
-    );
-
-    if (response.statusCode != 200) {
-      String message =
-          'Unable to upload the leaf image.';
-
-      try {
-        final dynamic decoded =
-            jsonDecode(response.body);
-
-        if (decoded is Map &&
-            decoded['detail'] != null) {
-          message =
-              decoded['detail'].toString();
-        }
-      } catch (_) {}
-
-      throw StateError(message);
-    }
-
-    final dynamic decoded =
-        jsonDecode(response.body);
-
-    if (decoded is! Map) {
+    if (decodedImage == null) {
       throw StateError(
-        'The server returned an invalid response.',
+        'The selected file is not a valid image.',
       );
     }
 
-    final String imagePath =
-        decoded['imagePath']
-                ?.toString()
-                .trim() ??
-            '';
+    img.Image processedImage = decodedImage;
 
-    if (imagePath.isEmpty) {
+    if (decodedImage.width > _maxImageDimension ||
+        decodedImage.height > _maxImageDimension) {
+      if (decodedImage.width >= decodedImage.height) {
+        processedImage = img.copyResize(
+          decodedImage,
+          width: _maxImageDimension,
+          interpolation: img.Interpolation.linear,
+        );
+      } else {
+        processedImage = img.copyResize(
+          decodedImage,
+          height: _maxImageDimension,
+          interpolation: img.Interpolation.linear,
+        );
+      }
+    }
+
+    // Convert every Expert Review image to JPEG.
+    // This keeps file sizes small and consistent.
+    final Uint8List uploadBytes = Uint8List.fromList(
+      img.encodeJpg(
+        processedImage,
+        quality: _jpegQuality,
+      ),
+    );
+
+    const int maxUploadSize = 5 * 1024 * 1024;
+
+    if (uploadBytes.length > maxUploadSize) {
       throw StateError(
-        'The server did not return an image path.',
+        'The optimized image is still larger than the 5 MB limit.',
       );
     }
+
+    final String fileName =
+        '${DateTime.now().millisecondsSinceEpoch}_${user.uid}.jpg';
+
+    final String storagePath =
+        '${user.uid}/$fileName';
+
+    try {
+      await _supabase.storage
+          .from(_bucket)
+          .uploadBinary(
+            storagePath,
+            uploadBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: false,
+              cacheControl: '3600',
+            ),
+          );
+    } on StorageException catch (error) {
+      throw StateError(
+        'Unable to upload the leaf image: ${error.message}',
+      );
+    } catch (error) {
+      throw StateError(
+        'Unable to upload the leaf image: $error',
+      );
+    }
+
+    final String publicImageUrl =
+        _supabase.storage
+            .from(_bucket)
+            .getPublicUrl(storagePath);
 
     final Map<String, dynamic> review = {
       'userId': user.uid,
       'email': user.email ?? '',
-      'imagePath': imagePath,
+      'imagePath': storagePath,
+      'imageUrl': publicImageUrl,
       'aiPrediction': aiPrediction.trim(),
       'confidence': confidence,
       'farmerName': farmerName.trim(),

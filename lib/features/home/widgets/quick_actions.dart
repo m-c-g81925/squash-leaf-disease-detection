@@ -28,24 +28,24 @@ class QuickActions extends StatelessWidget {
         const SizedBox(height: 16),
 
         _actionButton(
-          title: 'Scan for Disease',
-          subtitle: 'Take or upload a squash leaf photo',
+          title: 'I-scan ang balatian sang kalabasa',
+          subtitle: 'Magkuha ukon mag-upload sang picture sang dahon sang kalabasa.',
           icon: Icons.camera_alt,
           color: const Color(0xFF179E43),
           onTap: () => onTabChange(1),
         ),
 
         _actionButton(
-          title: 'Planting Calendar',
-          subtitle: 'Manage your planting schedules',
+          title: 'Kalendaryo sang pagtanom',
+          subtitle: 'Dumalaa ang schedule sang imo pagtanom.',
           icon: Icons.calendar_today,
           color: const Color(0xFF1DB954),
           onTap: () => onTabChange(2),
         ),
 
         _actionButton(
-          title: 'Disease Library',
-          subtitle: 'Browse squash diseases and treatments',
+          title: 'Librarya sang mga balatian',
+          subtitle: 'Talan-awan sang mga balatian sang kalabasa.',
           icon: Icons.menu_book,
           color: const Color(0xFF4ADE80),
           onTap: () => onTabChange(3),

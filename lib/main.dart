@@ -19,7 +19,7 @@ Future<void> main() async {
   // Supabase
   await Supabase.initialize(
     url: 'https://vitnxrbywjldwqeouhsy.supabase.co',
-    publishableKey: 'PASTE_YOUR_FULL_PUBLISHABLE_KEY_HERE',
+    publishableKey: 'sb_publishable_L99e6Njxfj2Xc_0eVYM1WA_ZIAeu1PG',
   );
 
   // Timezone

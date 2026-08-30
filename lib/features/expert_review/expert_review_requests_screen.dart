@@ -1,13 +1,22 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ExpertReviewRequestsScreen extends StatelessWidget {
+import '../../core/services/notification_service.dart';
+
+class ExpertReviewRequestsScreen extends StatefulWidget {
   const ExpertReviewRequestsScreen({super.key});
+
+  @override
+  State<ExpertReviewRequestsScreen> createState() =>
+      _ExpertReviewRequestsScreenState();
+}
+
+class _ExpertReviewRequestsScreenState
+    extends State<ExpertReviewRequestsScreen> {
+  final Map<String, String> _lastStatuses = <String, String>{};
+  bool _initialSnapshotLoaded = false;
 
   static const Color _primaryColor = Color(0xFF179E43);
   static const Color _backgroundColor = Color(0xFFF6F7F5);
@@ -141,6 +150,55 @@ class ExpertReviewRequestsScreen extends StatelessWidget {
           final documents =
               snapshot.data?.docs ?? [];
 
+          if (snapshot.hasData) {
+            final current = <String, String>{};
+
+            for (final doc in snapshot.data!.docs) {
+              current[doc.id] =
+                  doc.data()['status']?.toString().toLowerCase() ??
+                      'pending';
+            }
+
+            if (!_initialSnapshotLoaded) {
+              _lastStatuses
+                ..clear()
+                ..addAll(current);
+              _initialSnapshotLoaded = true;
+            } else {
+              for (final doc in snapshot.data!.docs) {
+                final oldStatus = _lastStatuses[doc.id];
+                final newStatus = current[doc.id] ?? 'pending';
+
+                if (oldStatus == 'pending' &&
+                    newStatus != oldStatus) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (newStatus == 'reviewed' ||
+                        newStatus == 'completed' ||
+                        newStatus == 'verified') {
+                      NotificationService.showExpertReviewNotification(
+                        id: doc.id.hashCode & 0x7fffffff,
+                        title: 'Expert Review Completed',
+                        body:
+                            'Your submitted squash leaf image has been reviewed. Open the app to view the diagnosis and recommendation.',
+                      );
+                    } else if (newStatus == 'rejected') {
+                      NotificationService.showExpertReviewNotification(
+                        id: doc.id.hashCode & 0x7fffffff,
+                        title: 'Expert Review Update',
+                        body:
+                            'Your submitted squash leaf image could not be verified. Open the app to view the review.',
+                      );
+                    }
+                  });
+                }
+              }
+
+              _lastStatuses
+                ..clear()
+                ..addAll(current);
+            }
+          }
+
           if (documents.isEmpty) {
             return _buildMessageState(
               icon: Icons.assignment_outlined,
@@ -250,19 +308,20 @@ class _ReviewRequestCard extends StatefulWidget {
 
 class _ReviewRequestCardState
     extends State<_ReviewRequestCard> {
-  static const String _baseUrl =
-      'http://10.0.25.151:8000';
+  static const String _bucket = 'expert-review-images';
 
   bool _isLoadingImage = false;
   String? _imageError;
-  Uint8List? _imageBytes;
-
-  // Keeps already-downloaded farmer request photos in memory.
-  static final Map<String, Uint8List> _imageCache =
-      <String, Uint8List>{};
+  String? _imageUrl;
 
   String get _imagePath =>
       widget.data['imagePath']
+              ?.toString()
+              .trim() ??
+          '';
+
+  String get _savedImageUrl =>
+      widget.data['imageUrl']
               ?.toString()
               .trim() ??
           '';
@@ -271,14 +330,15 @@ class _ReviewRequestCardState
   void initState() {
     super.initState();
 
-    final Uint8List? cachedImage = _imageCache[_imagePath];
-    if (cachedImage != null) {
-      _imageBytes = cachedImage;
-    }
+    final String savedUrl = _savedImageUrl;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startImageLoadIfNeeded();
-    });
+    if (savedUrl.isNotEmpty) {
+      _imageUrl = savedUrl;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _startImageLoadIfNeeded();
+      });
+    }
   }
 
   @override
@@ -289,52 +349,44 @@ class _ReviewRequestCardState
         oldWidget.data['imagePath']?.toString().trim() ?? '';
 
     if (oldImagePath != _imagePath) {
-      _imageBytes = _imageCache[_imagePath];
+      final String savedUrl = _savedImageUrl;
+
+      _imageUrl =
+          savedUrl.isNotEmpty ? savedUrl : null;
       _imageError = null;
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _startImageLoadIfNeeded();
-      });
+      if (_imageUrl == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _startImageLoadIfNeeded();
+        });
+      }
     }
   }
 
   void _startImageLoadIfNeeded() {
     if (!mounted) return;
 
-    debugPrint('FARMER REQUEST PHOTO PATH: $_imagePath');
-
-    if (_imagePath.isNotEmpty &&
-        _imageBytes == null &&
-        !_isLoadingImage) {
-      _loadImage();
-    }
-  }
-
-  Future<void> _loadImage() async {
-    if (_isLoadingImage ||
-        _imagePath.isEmpty) {
+    if (_imageUrl != null || _isLoadingImage) {
       return;
     }
 
-    final Uint8List? cachedImage = _imageCache[_imagePath];
-    if (cachedImage != null) {
-      if (!mounted) return;
+    final String savedUrl = _savedImageUrl;
 
+    if (savedUrl.isNotEmpty) {
       setState(() {
-        _imageBytes = cachedImage;
+        _imageUrl = savedUrl;
         _imageError = null;
       });
       return;
     }
 
-    final User? user =
-        FirebaseAuth.instance.currentUser;
+    if (_imagePath.isNotEmpty) {
+      _loadImage();
+    }
+  }
 
-    if (user == null) {
-      setState(() {
-        _imageError =
-            'You must be logged in to view this image.';
-      });
+  Future<void> _loadImage() async {
+    if (_isLoadingImage || _imagePath.isEmpty) {
       return;
     }
 
@@ -344,114 +396,27 @@ class _ReviewRequestCardState
     });
 
     try {
-      final String? idToken =
-          await user.getIdToken();
+      // Only older requests without imageUrl use this fallback.
+      final String imageUrl =
+          Supabase.instance.client.storage
+              .from(_bucket)
+              .getPublicUrl(_imagePath);
 
-      if (idToken == null ||
-          idToken.isEmpty) {
+      if (imageUrl.isEmpty) {
         throw StateError(
-          'Unable to verify your account.',
+          'Unable to create the submitted image URL.',
         );
       }
 
-      final Uri uri = Uri.parse(
-        '$_baseUrl/expert-review/image',
-      ).replace(
-        queryParameters: <String, String>{
-          'image_path': _imagePath,
-        },
-      );
-
-      debugPrint('FARMER REQUEST PHOTO GET: $uri');
-
-      final http.Response response =
-          await http.get(
-        uri,
-        headers: <String, String>{
-          'Authorization':
-              'Bearer $idToken',
-        },
-      ).timeout(
-        const Duration(seconds: 30),
-      );
-
-      if (response.statusCode != 200) {
-        String message =
-            'Unable to load the submitted image.';
-
-        try {
-          final dynamic decoded =
-              jsonDecode(response.body);
-
-          if (decoded is Map &&
-              decoded['detail'] != null) {
-            message =
-                decoded['detail'].toString();
-          }
-        } catch (_) {}
-
-        throw StateError(message);
-      }
-
-      final dynamic decoded =
-          jsonDecode(response.body);
-
-      final String signedUrl =
-          decoded is Map
-              ? decoded['signedUrl']
-                      ?.toString()
-                      .trim() ??
-                  ''
-              : '';
-
-      if (signedUrl.isEmpty) {
-        throw StateError(
-          'The server did not return an image URL.',
-        );
-      }
-
-      final http.Response imageResponse =
-          await http.get(
-        Uri.parse(signedUrl),
-      ).timeout(
-        const Duration(seconds: 30),
-      );
-
-      if (imageResponse.statusCode != 200) {
-        throw StateError(
-          'The image server returned '
-          '${imageResponse.statusCode}.',
-        );
-      }
-
-      if (imageResponse.bodyBytes.isEmpty) {
-        throw StateError(
-          'The submitted image contained no data.',
-        );
-      }
-
-      final Uint8List imageBytes =
-          imageResponse.bodyBytes;
-
-      debugPrint(
-        'FARMER REQUEST PHOTO DOWNLOADED: ${imageBytes.length} bytes',
-      );
-
-      _imageCache[_imagePath] = imageBytes;
-
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _imageBytes = imageBytes;
+        _imageUrl = imageUrl;
         _isLoadingImage = false;
         _imageError = null;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _isLoadingImage = false;
@@ -468,7 +433,7 @@ class _ReviewRequestCardState
   @override
   Widget build(BuildContext context) {
     if (_imagePath.isNotEmpty &&
-        _imageBytes == null &&
+        _imageUrl == null &&
         !_isLoadingImage &&
         _imageError == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -826,7 +791,7 @@ class _ReviewRequestCardState
       );
     }
 
-    if (_imageBytes == null) {
+    if (_imageUrl == null) {
       return const SizedBox.shrink();
     }
 
@@ -842,10 +807,40 @@ class _ReviewRequestCardState
         ),
         color:
             const Color(0xFFF3F5F3),
-        child: Image.memory(
-          _imageBytes!,
+        child: Image.network(
+          _imageUrl!,
           width: double.infinity,
           fit: BoxFit.contain,
+          gaplessPlayback: true,
+          cacheWidth: 1024,
+          loadingBuilder: (
+            BuildContext context,
+            Widget child,
+            ImageChunkEvent? loadingProgress,
+          ) {
+            if (loadingProgress == null) {
+              return child;
+            }
+
+            return const SizedBox(
+              height: 190,
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF179E43),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (_, __, ___) => SizedBox(
+            height: 190,
+            child: Center(
+              child: TextButton.icon(
+                onPressed: _loadImage,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reload photo'),
+              ),
+            ),
+          ),
         ),
       ),
     );
